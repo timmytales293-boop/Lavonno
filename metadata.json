@@ -1,0 +1,6 @@
+{
+  "name": "Noor",
+  "description": "Personal Islamic Assistant with Prayer Times, Quran, Hadith, Dua, Namaz Tracker, Noor AI, and Digital Wellbeing Guard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

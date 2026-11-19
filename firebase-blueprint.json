@@ -1,0 +1,129 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User preferences, location, Quran reading bookmark, and Direct Lock guard configuration.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "cityName": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "lastReadSurah": { "type": "integer" },
+        "lastReadAyah": { "type": "integer" },
+        "lastReadSurahName": { "type": "string" },
+        "azanEnabled": { "type": "boolean" },
+        "prePrayerAlertEnabled": { "type": "boolean" },
+        "nightLockEnabled": { "type": "boolean" },
+        "pornBlockEnabled": { "type": "boolean" },
+        "uninstallLockEnabled": { "type": "boolean" },
+        "dailyPhoneLimitMinutes": { "type": "integer" },
+        "focusModeUntilEpochMs": { "type": "integer" },
+        "activeLockMode": {
+          "type": "string",
+          "enum": ["NONE", "PUSHUP_10", "PUSHUP_30", "NIGHT", "FOCUS"]
+        },
+        "requiredPushUps": { "type": "integer" },
+        "activeLockUntilEpochMs": { "type": "integer" },
+        "femaleVoiceEnabled": { "type": "boolean" },
+        "namazAutoSilentEnabled": { "type": "boolean" },
+        "ffDailyLimitMinutes": { "type": "integer" },
+        "ffGuardEnabled": { "type": "boolean" },
+        "gamblingBlockEnabled": { "type": "boolean" },
+        "sosPhoneNumber": { "type": "string" },
+        "defensePlanDayBits": { "type": "integer" },
+        "lockTriggerReason": { "type": "string" },
+        "familyRole": { "type": "string", "enum": ["BOSS", "MA", "BON"] },
+        "isPeriodMode": { "type": "boolean" },
+        "periodDayNumber": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "cityName", "latitude", "longitude", "createdAt", "updatedAt"]
+    },
+    "NamazLog": {
+      "title": "NamazLog",
+      "description": "Daily 5-wakto prayer completion tracker for weekly reports.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "fajr": { "type": "boolean" },
+        "dhuhr": { "type": "boolean" },
+        "asr": { "type": "boolean" },
+        "maghrib": { "type": "boolean" },
+        "isha": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "dateKey", "fajr", "dhuhr", "asr", "maghrib", "isha", "createdAt", "updatedAt"]
+    },
+    "AiMessage": {
+      "title": "AiMessage",
+      "description": "Personal Noor AI chat message.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sender": { "type": "string", "enum": ["USER", "NOOR"] },
+        "text": { "type": "string" },
+        "reference": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "sender", "text", "createdAt"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "Personal Boss alarm/reminder scheduled through Noor AI or settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "hour": { "type": "integer" },
+        "minute": { "type": "integer" },
+        "enabled": { "type": "boolean" },
+        "repeatDaily": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "title", "hour", "minute", "enabled", "repeatDaily", "createdAt", "updatedAt"]
+    },
+    "AppLimit": {
+      "title": "AppLimit",
+      "description": "Per-app daily usage time restriction rule.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "packageName": { "type": "string" },
+        "appName": { "type": "string" },
+        "dailyLimitMinutes": { "type": "integer" },
+        "enabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp" }
+      },
+      "required": ["userId", "packageName", "appName", "dailyLimitMinutes", "enabled", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profile, Quran bookmark, and Direct Lock guard configuration."
+    },
+    "/users/{userId}/namaz_logs/{dateKey}": {
+      "schema": { "$ref": "#/entities/NamazLog" },
+      "description": "Daily 5-wakto prayer completion document keyed by YYYY-MM-DD."
+    },
+    "/users/{userId}/ai_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/AiMessage" },
+      "description": "Noor AI chat messages owned by the user."
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/Reminder" },
+      "description": "Custom Boss reminders and alarms owned by the user."
+    },
+    "/users/{userId}/app_limits/{limitId}": {
+      "schema": { "$ref": "#/entities/AppLimit" },
+      "description": "Daily app restriction rules owned by the user."
+    }
+  }
+}

@@ -1,0 +1,241 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validators
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.cityName is string && data.cityName.size() >= 1 && data.cityName.size() <= 80 &&
+             (data.latitude is number) && data.latitude >= -90 && data.latitude <= 90 &&
+             (data.longitude is number) && data.longitude >= -180 && data.longitude <= 180 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('lastReadSurah' in data) || (data.lastReadSurah is int && data.lastReadSurah >= 1 && data.lastReadSurah <= 114)) &&
+             (!('lastReadAyah' in data) || (data.lastReadAyah is int && data.lastReadAyah >= 1 && data.lastReadAyah <= 300)) &&
+             (!('lastReadSurahName' in data) || (data.lastReadSurahName is string && data.lastReadSurahName.size() <= 80)) &&
+             (!('azanEnabled' in data) || data.azanEnabled is bool) &&
+             (!('prePrayerAlertEnabled' in data) || data.prePrayerAlertEnabled is bool) &&
+             (!('nightLockEnabled' in data) || data.nightLockEnabled is bool) &&
+             (!('pornBlockEnabled' in data) || data.pornBlockEnabled is bool) &&
+             (!('uninstallLockEnabled' in data) || data.uninstallLockEnabled is bool) &&
+             (!('dailyPhoneLimitMinutes' in data) || (data.dailyPhoneLimitMinutes is int && data.dailyPhoneLimitMinutes >= 15 && data.dailyPhoneLimitMinutes <= 720)) &&
+             (!('focusModeUntilEpochMs' in data) || (data.focusModeUntilEpochMs is int && data.focusModeUntilEpochMs >= 0)) &&
+             (!('activeLockMode' in data) || (data.activeLockMode is string && data.activeLockMode in ['NONE', 'PUSHUP_10', 'PUSHUP_30', 'NIGHT', 'FOCUS'])) &&
+             (!('requiredPushUps' in data) || (data.requiredPushUps is int && data.requiredPushUps >= 0 && data.requiredPushUps <= 100)) &&
+             (!('activeLockUntilEpochMs' in data) || (data.activeLockUntilEpochMs is int && data.activeLockUntilEpochMs >= 0)) &&
+             (!('femaleVoiceEnabled' in data) || data.femaleVoiceEnabled is bool) &&
+             (!('namazAutoSilentEnabled' in data) || data.namazAutoSilentEnabled is bool) &&
+             (!('ffDailyLimitMinutes' in data) || (data.ffDailyLimitMinutes is int && data.ffDailyLimitMinutes >= 10 && data.ffDailyLimitMinutes <= 360)) &&
+             (!('ffGuardEnabled' in data) || data.ffGuardEnabled is bool) &&
+             (!('gamblingBlockEnabled' in data) || data.gamblingBlockEnabled is bool) &&
+             (!('sosPhoneNumber' in data) || (data.sosPhoneNumber is string && data.sosPhoneNumber.size() <= 30)) &&
+             (!('defensePlanDayBits' in data) || (data.defensePlanDayBits is int && data.defensePlanDayBits >= 0 && data.defensePlanDayBits <= 127)) &&
+             (!('lockTriggerReason' in data) || (data.lockTriggerReason is string && data.lockTriggerReason.size() <= 200)) &&
+             (!('familyRole' in data) || (data.familyRole is string && data.familyRole in ['BOSS', 'MA', 'BON'])) &&
+             (!('isPeriodMode' in data) || data.isPeriodMode is bool) &&
+             (!('periodDayNumber' in data) || (data.periodDayNumber is int && data.periodDayNumber >= 0 && data.periodDayNumber <= 45));
+    }
+
+    function isValidNamazLog(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.dateKey is string && data.dateKey.size() >= 8 && data.dateKey.size() <= 20 &&
+             data.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             data.fajr is bool &&
+             data.dhuhr is bool &&
+             data.asr is bool &&
+             data.maghrib is bool &&
+             data.isha is bool;
+    }
+
+    function isValidAiMessage(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.sender is string && data.sender in ['USER', 'NOOR'] &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 8000 &&
+             (!('reference' in data) || (data.reference is string && data.reference.size() <= 200));
+    }
+
+    function isValidReminder(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.hour is int && data.hour >= 0 && data.hour <= 23 &&
+             data.minute is int && data.minute >= 0 && data.minute <= 59 &&
+             data.enabled is bool &&
+             data.repeatDaily is bool;
+    }
+
+    function isValidAppLimit(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.packageName is string && data.packageName.size() >= 3 && data.packageName.size() <= 150 &&
+             data.appName is string && data.appName.size() >= 1 && data.appName.size() <= 80 &&
+             data.dailyLimitMinutes is int && data.dailyLimitMinutes >= 1 && data.dailyLimitMinutes <= 1440 &&
+             data.enabled is bool;
+    }
+
+    // /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'cityName', 'latitude', 'longitude', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'cityName', 'latitude', 'longitude',
+                         'lastReadSurah', 'lastReadAyah', 'lastReadSurahName',
+                         'azanEnabled', 'prePrayerAlertEnabled', 'nightLockEnabled',
+                         'pornBlockEnabled', 'uninstallLockEnabled', 'dailyPhoneLimitMinutes',
+                         'focusModeUntilEpochMs', 'activeLockMode', 'requiredPushUps', 'activeLockUntilEpochMs',
+                         'femaleVoiceEnabled', 'namazAutoSilentEnabled', 'ffDailyLimitMinutes',
+                         'ffGuardEnabled', 'gamblingBlockEnabled', 'sosPhoneNumber',
+                         'defensePlanDayBits', 'lockTriggerReason',
+                         'familyRole', 'isPeriodMode', 'periodDayNumber',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'cityName', 'latitude', 'longitude',
+                         'lastReadSurah', 'lastReadAyah', 'lastReadSurahName',
+                         'azanEnabled', 'prePrayerAlertEnabled', 'nightLockEnabled',
+                         'pornBlockEnabled', 'uninstallLockEnabled', 'dailyPhoneLimitMinutes',
+                         'focusModeUntilEpochMs', 'activeLockMode', 'requiredPushUps', 'activeLockUntilEpochMs',
+                         'femaleVoiceEnabled', 'namazAutoSilentEnabled', 'ffDailyLimitMinutes',
+                         'ffGuardEnabled', 'gamblingBlockEnabled', 'sosPhoneNumber',
+                         'defensePlanDayBits', 'lockTriggerReason',
+                         'familyRole', 'isPeriodMode', 'periodDayNumber',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // /users/{userId}/namaz_logs/{dateKey}
+      match /namaz_logs/{dateKey} {
+        allow get: if isOwner(userId) && isValidId(dateKey);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().keys().hasAll(['userId', 'dateKey', 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'dateKey', 'fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidNamazLog(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidNamazLog(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(dateKey);
+      }
+
+      // /users/{userId}/ai_messages/{messageId}
+      match /ai_messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         incoming().keys().hasAll(['userId', 'sender', 'text', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'sender', 'text', 'reference', 'createdAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         isValidAiMessage(incoming());
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+
+      // /users/{userId}/reminders/{reminderId}
+      match /reminders/{reminderId} {
+        allow get: if isOwner(userId) && isValidId(reminderId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'hour', 'minute', 'enabled', 'repeatDaily', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'hour', 'minute', 'enabled', 'repeatDaily', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidReminder(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(reminderId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidReminder(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'hour', 'minute', 'enabled', 'repeatDaily', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(reminderId);
+      }
+
+      // /users/{userId}/app_limits/{limitId}
+      match /app_limits/{limitId} {
+        allow get: if isOwner(userId) && isValidId(limitId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(limitId) &&
+                         incoming().keys().hasAll(['userId', 'packageName', 'appName', 'dailyLimitMinutes', 'enabled', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'packageName', 'appName', 'dailyLimitMinutes', 'enabled', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp && incoming().createdAt <= request.time &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidAppLimit(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(limitId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().packageName == existing().packageName &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt is timestamp && incoming().updatedAt <= request.time &&
+                         isValidAppLimit(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['appName', 'dailyLimitMinutes', 'enabled', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(limitId);
+      }
+    }
+  }
+}
